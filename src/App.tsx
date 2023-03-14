@@ -1,10 +1,32 @@
 import React, { Suspense, useRef, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, ThreeElements, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Mesh } from 'three';
 import { useGLTF, Environment } from '@react-three/drei';
+import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 
-function Box({ z }: { z: number }) {
+type GLTFBanana = GLTF & {
+  nodes: {
+    Banana: THREE.Mesh;
+    banana_low_Banana_0: THREE.Mesh;
+  };
+  materials: {
+    ['default']: THREE.MeshStandardMaterial;
+    Banana: THREE.MeshStandardMaterial;
+  };
+};
+
+type GLTFApple = GLTF & {
+  nodes: {
+    'apple_low_obj_Material_#35_0': THREE.Mesh;
+  };
+  materials: {
+    ['default']: THREE.MeshStandardMaterial;
+    Material_35: THREE.MeshStandardMaterial;
+  };
+};
+
+function Banana({ z }: { z: number }) {
   const ref = useRef<Mesh>(null);
   const [clicked, setClicked] = useState<boolean>(false);
   const { viewport, camera } = useThree();
@@ -14,41 +36,58 @@ function Box({ z }: { z: number }) {
     y: THREE.MathUtils.randFloatSpread(height),
     z
   });
+  const [idx] = useState(Math.round(Math.random()));
+  const { nodes: bananaNodes, materials: bananaMaterials } = useGLTF('/banana-v1-transformed.glb') as GLTFBanana;
+  const { nodes: appleNodes, materials: appleMaterials } = useGLTF('/apple-v1-transformed.glb') as GLTFApple;
+
+  const type = [
+    {
+      geometry: bananaNodes.banana_low_Banana_0.geometry,
+      material: bananaMaterials.Banana,
+      ['material-emissive']: 'orange',
+      rotation: new THREE.Euler(0, 0.15, -0.01)
+    },
+    {
+      geometry: appleNodes['apple_low_obj_Material_#35_0'].geometry,
+      material: appleMaterials.Material_35,
+      ['material-emissive']: 'red',
+      rotation: new THREE.Euler(-0.05, 0.04, -0.01),
+      scale: 0.11
+    }
+  ];
 
   useFrame((state) => {
     const { elapsedTime } = state.clock;
-    ref.current!.position.set(data.x * width, (data.y += 0.5), data.z);
+    ref.current!.position.set(data.x * width, (data.y += 0.3), data.z);
     if (data.y > height / 1.5) {
       data.y = -height / 1.5;
     }
   });
+
   return (
     <mesh
       ref={ref}
-      onClick={() => setClicked((current) => !current)}
-      position={[0, clicked ? 0 : 1, 0]}
-      rotation={[0, 0, 0]}
-    >
-      <boxGeometry />
-      <meshBasicMaterial color="tomato" />
-    </mesh>
+      geometry={type[idx].geometry}
+      material={type[idx].material}
+      rotation={type[idx].rotation}
+      scale={type[idx].scale}
+      material-emissive={type[idx]['material-emissive']}
+    />
   );
 }
 
-function Banana(props: any) {
-  const { scene } = useGLTF('/public/banana-v1.glb');
-  return <primitive object={scene} {...props} />;
-}
-function App({ count = 100 }) {
+useGLTF.preload('/banana-v1-transformed.glb');
+useGLTF.preload('/apple-v1-transformed.glb');
+
+function App({ count = 30 }) {
   return (
     <Canvas>
-      {/* {Array.from({ length: count }).map((_, idx) => (
-        <Box key={`box ${idx}`} z={-idx} />
-      ))} */}
       <ambientLight intensity={0.2} />
       <spotLight position={[10, 10, 10]} intensity={2} />
       <Suspense fallback={null}>
-        <Banana scale={0.01} />
+        {Array.from({ length: count }).map((_, idx) => (
+          <Banana key={`box ${idx}`} z={-idx} />
+        ))}
         <Environment preset={'sunset'} />
       </Suspense>
     </Canvas>
