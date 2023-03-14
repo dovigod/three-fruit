@@ -1,22 +1,25 @@
-import { useRef, useState } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Mesh } from 'three';
+import { useGLTF, Environment } from '@react-three/drei';
 
-function Box() {
+function Box({ z }: { z: number }) {
   const ref = useRef<Mesh>(null);
   const [clicked, setClicked] = useState<boolean>(false);
-  const { viewport } = useThree();
+  const { viewport, camera } = useThree();
+  const { width, height } = viewport.getCurrentViewport(camera, [0, 0, z]);
   const [data] = useState({
     x: THREE.MathUtils.randFloatSpread(1),
-    y: THREE.MathUtils.randFloatSpread(viewport.height)
+    y: THREE.MathUtils.randFloatSpread(height),
+    z
   });
 
   useFrame((state) => {
     const { elapsedTime } = state.clock;
-    ref.current!.position.set(data.x * viewport.width, (data.y += 0.1), 0);
-    if (data.y > viewport.height / 1.5) {
-      data.y = -viewport.height / 1.5;
+    ref.current!.position.set(data.x * width, (data.y += 0.5), data.z);
+    if (data.y > height / 1.5) {
+      data.y = -height / 1.5;
     }
   });
   return (
@@ -32,12 +35,22 @@ function Box() {
   );
 }
 
-function App() {
+function Banana(props: any) {
+  const { scene } = useGLTF('/public/banana-v1.glb');
+  return <primitive object={scene} {...props} />;
+}
+function App({ count = 100 }) {
   return (
     <Canvas>
-      <Box />
-      <Box />
-      <Box />
+      {/* {Array.from({ length: count }).map((_, idx) => (
+        <Box key={`box ${idx}`} z={-idx} />
+      ))} */}
+      <ambientLight intensity={0.2} />
+      <spotLight position={[10, 10, 10]} intensity={2} />
+      <Suspense fallback={null}>
+        <Banana scale={0.01} />
+        <Environment preset={'sunset'} />
+      </Suspense>
     </Canvas>
   );
 }
