@@ -6,23 +6,24 @@ import { EffectComposer, DepthOfField } from '@react-three/postprocessing';
 import { GLTFBanana, GLTFApple } from '@type/GLTF';
 import SpotLight from '@components/Light/SpotLight';
 import Fruit from '@components/Mesh/Fruit';
+import BackgroundEffect from './components/Effect/BackgroundEffect';
 import { defaultSettings } from '../config';
 
-const BANANA_GLB_URI = '/banana-v1-transformed.glb';
-const APPLE_GLB_URI = '/apple-v1-transformed.glb';
+const BANANA = '/banana-v1-transformed.glb';
+const APPLE = '/apple-v1-transformed.glb';
 
-useGLTF.preload(BANANA_GLB_URI);
-useGLTF.preload(APPLE_GLB_URI);
+useGLTF.preload(BANANA);
+useGLTF.preload(APPLE);
 
 function App({ count = 100, depth = 80 }) {
-  const { nodes: bananaNodes, materials: bananaMaterials } = useGLTF(BANANA_GLB_URI) as GLTFBanana;
-  const { nodes: appleNodes, materials: appleMaterials } = useGLTF(APPLE_GLB_URI) as GLTFApple;
+  const { nodes: bananaNodes, materials: bananaMaterials } = useGLTF(BANANA) as GLTFBanana;
+  const { nodes: appleNodes, materials: appleMaterials } = useGLTF(APPLE) as GLTFApple;
   const {
     canvas: {
       camera,
       gl: { alpha }
     },
-    background: { color },
+    background: { color, colorList },
     postProcessor: { focalLength, bokehScale, height, target },
     environment: { preset }
   } = defaultSettings;
@@ -47,6 +48,7 @@ function App({ count = 100, depth = 80 }) {
     <Canvas gl={{ alpha }} camera={camera}>
       <color attach="background" args={[color]} />
       <SpotLight />
+      <BackgroundEffect colors={colorList} />
 
       <Suspense fallback={null}>
         {Array.from({ length: count }).map((_, idx) => (

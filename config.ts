@@ -6,7 +6,8 @@ export const defaultSettings = {
     gl: { alpha: false }
   },
   background: {
-    color: '#ffbf40'
+    color: '#ffbf40',
+    colorList: ['#ffbf40', '#927dd8']
   },
   postProcessor: {
     focalLength: 0.5,
