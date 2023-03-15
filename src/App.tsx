@@ -1,49 +1,33 @@
-import React, { Suspense, useRef, useState } from 'react';
-import { Canvas, ThreeElements, useFrame, useThree } from '@react-three/fiber';
+import { Suspense } from 'react';
+import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Mesh } from 'three';
 import { useGLTF, Environment } from '@react-three/drei';
-import { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 import { EffectComposer, DepthOfField } from '@react-three/postprocessing';
+import { GLTFBanana, GLTFApple } from '@type/GLTF';
+import SpotLight from '@components/Light/SpotLight';
+import Fruit from '@components/Mesh/Fruit';
+import { defaultSettings } from '../config';
 
-type GLTFBanana = GLTF & {
-  nodes: {
-    Banana: THREE.Mesh;
-    banana_low_Banana_0: THREE.Mesh;
-  };
-  materials: {
-    ['default']: THREE.MeshStandardMaterial;
-    Banana: THREE.MeshStandardMaterial;
-  };
-};
+const BANANA_GLB_URI = '/banana-v1-transformed.glb';
+const APPLE_GLB_URI = '/apple-v1-transformed.glb';
 
-type GLTFApple = GLTF & {
-  nodes: {
-    'apple_low_obj_Material_#35_0': THREE.Mesh;
-  };
-  materials: {
-    ['default']: THREE.MeshStandardMaterial;
-    Material_35: THREE.MeshStandardMaterial;
-  };
-};
+useGLTF.preload(BANANA_GLB_URI);
+useGLTF.preload(APPLE_GLB_URI);
 
-function Banana({ z }: { z: number }) {
-  const ref = useRef<Mesh>(null);
-  const { viewport, camera } = useThree();
-  const { width, height } = viewport.getCurrentViewport(camera, [0, 0, z]);
-  const [data] = useState({
-    x: THREE.MathUtils.randFloatSpread(1),
-    y: THREE.MathUtils.randFloatSpread(height),
-    z,
-    rx: Math.random() * Math.PI,
-    ry: Math.random() * Math.PI,
-    rz: Math.random() * Math.PI
-  });
-  const [idx] = useState(Math.round(Math.random()));
-  const { nodes: bananaNodes, materials: bananaMaterials } = useGLTF('/banana-v1-transformed.glb') as GLTFBanana;
-  const { nodes: appleNodes, materials: appleMaterials } = useGLTF('/apple-v1-transformed.glb') as GLTFApple;
+function App({ count = 100, depth = 80 }) {
+  const { nodes: bananaNodes, materials: bananaMaterials } = useGLTF(BANANA_GLB_URI) as GLTFBanana;
+  const { nodes: appleNodes, materials: appleMaterials } = useGLTF(APPLE_GLB_URI) as GLTFApple;
+  const {
+    canvas: {
+      camera,
+      gl: { alpha }
+    },
+    background: { color },
+    postProcessor: { focalLength, bokehScale, height, target },
+    environment: { preset }
+  } = defaultSettings;
 
-  const type = [
+  const fruitType = [
     {
       geometry: bananaNodes.banana_low_Banana_0.geometry,
       material: bananaMaterials.Banana,
@@ -59,43 +43,19 @@ function Banana({ z }: { z: number }) {
     }
   ];
 
-  useFrame((state) => {
-    ref.current!.rotation.set((data.rx += 0.001), (data.ry += 0.004), (data.rz += 0.0005));
-    ref.current!.position.set(data.x * width, (data.y += 0.05), data.z);
-    if (data.y > height / 1.5) {
-      data.y = -height / 1.5;
-    }
-  });
-
   return (
-    <mesh
-      ref={ref}
-      geometry={type[idx].geometry}
-      material={type[idx].material}
-      rotation={type[idx].rotation}
-      scale={type[idx].scale}
-      material-emissive={type[idx]['material-emissive']}
-    />
-  );
-}
+    <Canvas gl={{ alpha }} camera={camera}>
+      <color attach="background" args={[color]} />
+      <SpotLight />
 
-useGLTF.preload('/banana-v1-transformed.glb');
-useGLTF.preload('/apple-v1-transformed.glb');
-
-function App({ count = 100, depth = 80 }) {
-  return (
-    <Canvas gl={{ alpha: false }} camera={{ near: 0.01, far: 110, fov: 30 }}>
-      <color attach="background" args={['#ffbf40']} />
-
-      <spotLight position={[10, 10, 10]} intensity={1} />
       <Suspense fallback={null}>
         {Array.from({ length: count }).map((_, idx) => (
-          <Banana key={`box ${idx}`} z={-(idx / count) * depth - 20} />
+          <Fruit key={idx} z_origin={-(idx / count) * depth - 20} textureObj={fruitType[idx % 2]} />
         ))}
         <EffectComposer>
-          <DepthOfField target={[0, 0, depth / 2]} focalLength={0.5} bokehScale={11} height={700} />
+          <DepthOfField target={target(depth)} focalLength={focalLength} bokehScale={bokehScale} height={height} />
         </EffectComposer>
-        <Environment preset={'sunset'} />
+        <Environment preset={preset} />
       </Suspense>
     </Canvas>
   );
